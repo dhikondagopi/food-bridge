@@ -3,29 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Title -->
     <title>FoodShare - Zero Waste Food Network</title>
-    <meta name="description" content="Connect restaurants, NGOs, and volunteers to reduce food waste and fight hunger" />
+
+    <!-- SEO -->
+    <meta name="description" content="Connect restaurants, NGOs, and volunteers to reduce food waste and fight hunger." />
     <meta name="author" content="FoodShare" />
+
+    <!-- Theme -->
     <meta name="theme-color" content="#0284c7" />
+
+    <!-- PWA -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="FoodShare" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <link rel="icon" href="/pwa-192x192.png" />
 
+    <!-- Open Graph (WhatsApp, LinkedIn, Facebook) -->
     <meta property="og:title" content="FoodShare - Zero Waste Food Network" />
-    <meta property="og:description" content="Connect restaurants, NGOs, and volunteers to reduce food waste and fight hunger" />
+    <meta property="og:description" content="Connect restaurants, NGOs, and volunteers to reduce food waste and fight hunger." />
+    <meta property="og:image" content="https://foodbridge.netlify.app/preview.png" />
+    <meta property="og:url" content="https://foodbridge.netlify.app" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:title" content="FoodShare - Zero Waste Food Network" />
+    <meta name="twitter:description" content="Connect restaurants, NGOs, and volunteers to reduce food waste." />
+    <meta name="twitter:image" content="https://foodbridge.netlify.app/preview.png" />
+
   </head>
 
   <body>
     <script>
-      (function(){var t=localStorage.getItem('theme');if(t==='dark'||((!t)&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')})();
+      (function(){
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || ((!t) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
     </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
