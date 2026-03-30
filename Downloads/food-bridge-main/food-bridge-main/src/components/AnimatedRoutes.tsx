@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AuthCallback from "@/pages/AuthCallback";
 
 // Pages
 const Landing = lazy(() => import("@/pages/Landing"));
@@ -37,66 +38,132 @@ const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={pageTransition}
-        className="min-h-screen relative"
-      >
-        <Suspense
-          fallback={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          }
+    <>
+      {/* 🔥 IMPORTANT: Keep callback outside animation */}
+      <Routes>
+        <Route path="/auth/callback" element={<AuthCallback />} />
+      </Routes>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransition}
+          className="min-h-screen relative"
         >
-          <Routes location={location}>
-            {/* Public */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+          <Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            }
+          >
+            {/* 🔥 IMPORTANT FIX */}
+            <Routes location={location} key={location.key}>
+              
+              {/* Public */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Main */}
-            <Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  }
-/>
-            <Route path="/volunteer-dashboard" element={<Dashboard />} />
-            <Route path="/map" element={<MapPage />} />
-            <Route
-  path="/profile"
-  element={
-    <ProtectedRoute>
-      <Profile />
-    </ProtectedRoute>
-  }
-/>
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/call-history" element={<CallHistory />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/install" element={<Install />} />
+              {/* Protected */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin */}
-            <Route path="/sudo-panel" element={<AdminLogin />} />
-            <Route path="/admin" element={<Admin />} />
+              <Route
+                path="/volunteer-dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/call-history"
+                element={
+                  <ProtectedRoute>
+                    <CallHistory />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/map"
+                element={
+                  <ProtectedRoute>
+                    <MapPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <Leaderboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route path="/install" element={<Install />} />
+
+              {/* Admin (should also be protected ideally) */}
+              <Route path="/sudo-panel" element={<AdminLogin />} />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </motion.div>
+      </AnimatePresence>
+    </>
   );
 };
 

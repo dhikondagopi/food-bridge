@@ -8,17 +8,25 @@ import AnimatedRoutes from "@/components/AnimatedRoutes";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AnimatedRoutes />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </BrowserRouter>
-);
+const App = () => {
+  return (
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            
+            {/* 🔥 ROUTES HANDLED HERE */}
+            <AnimatedRoutes />
+
+            {/* Notifications */}
+            <Toaster />
+            <Sonner />
+
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
+  );
+};
+
 export default App;
