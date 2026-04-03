@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabaseClient';
 import { Bell, Check, CheckCheck, Inbox } from 'lucide-react';
 import { Notification } from '@/types';
 import { Badge } from '@/components/ui/badge';

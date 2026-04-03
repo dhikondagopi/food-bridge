@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabaseClient';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Phone, Video, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { StaggerContainer, StaggerItem } from '@/components/motion/StaggerContainer';
 
 interface CallLog {
   id: string;
@@ -15,9 +17,16 @@ interface CallLog {
   started_at: string;
   ended_at: string | null;
   duration_seconds: number;
-  caller_profile?: { full_name: string };
-  receiver_profile?: { full_name: string };
+  caller_profile?: { full_name: string } | null;
+  receiver_profile?: { full_name: string } | null;
 }
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  completed: { label: 'Completed', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' },
+  ongoing:   { label: 'Ongoing',   color: 'text-sky-600 dark:text-sky-400',         bg: 'bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20' },
+  missed:    { label: 'Missed',    color: 'text-red-600 dark:text-red-400',          bg: 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20' },
+  rejected:  { label: 'Declined',  color: 'text-amber-600 dark:text-amber-400',      bg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' },
+};
 
 const CallHistory = () => {
   const { user } = useAuth();
@@ -27,13 +36,30 @@ const CallHistory = () => {
   useEffect(() => {
     if (!user) return;
     const fetchCalls = async () => {
-      const { data } = await supabase
+      // ✅ Use simple join without fk aliases that don't exist
+      const { data, error } = await supabase
         .from('call_logs')
-        .select('*, caller_profile:profiles!fk_caller(full_name), receiver_profile:profiles!fk_receiver(full_name)')
+        .select(`
+          *,
+          caller_profile:profiles!call_logs_caller_id_fkey(full_name),
+          receiver_profile:profiles!call_logs_receiver_id_fkey(full_name)
+        `)
         .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .order('started_at', { ascending: false })
         .limit(50);
-      setCalls((data as CallLog[]) || []);
+
+      if (error) {
+        // ✅ Fallback: fetch without join if FK names don't match
+        const { data: fallback } = await supabase
+          .from('call_logs')
+          .select('*')
+          .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .order('started_at', { ascending: false })
+          .limit(50);
+        setCalls((fallback as CallLog[]) || []);
+      } else {
+        setCalls((data as CallLog[]) || []);
+      }
       setLoading(false);
     };
     fetchCalls();
@@ -56,22 +82,11 @@ const CallHistory = () => {
     return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
   };
 
-  const getStatusBadge = (status: string) => {
-    const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      completed: { variant: 'default', label: 'Completed' },
-      ongoing: { variant: 'secondary', label: 'Ongoing' },
-      missed: { variant: 'destructive', label: 'Missed' },
-      rejected: { variant: 'outline', label: 'Declined' },
-    };
-    const info = map[status] || { variant: 'outline' as const, label: status };
-    return <Badge variant={info.variant}>{info.label}</Badge>;
-  };
-
   const getCallIcon = (call: CallLog) => {
     const isOutgoing = call.caller_id === user?.id;
-    if (call.status === 'missed') return <PhoneMissed className="h-5 w-5 text-destructive" />;
+    if (call.status === 'missed') return <PhoneMissed className="h-5 w-5 text-red-500" />;
     if (isOutgoing) return <PhoneOutgoing className="h-5 w-5 text-primary" />;
-    return <PhoneIncoming className="h-5 w-5 text-accent-foreground" />;
+    return <PhoneIncoming className="h-5 w-5 text-emerald-500" />;
   };
 
   const getOtherName = (call: CallLog) => {
@@ -79,41 +94,81 @@ const CallHistory = () => {
     return call.caller_profile?.full_name || 'Unknown';
   };
 
+  // ✅ NO DashboardLayout wrapper — already wrapped by AnimatedRoutes → Profile pages
   return (
-    <DashboardLayout>
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-heading font-bold text-foreground mb-6">Call History</h1>
+    <div className="space-y-6">
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
-            ))}
+      {/* ── Header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 p-5 shadow-lg sm:p-6"
+      >
+        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+            <Phone className="h-5 w-5 text-white" />
           </div>
-        ) : calls.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Phone className="h-12 w-12 mb-3 opacity-40" />
-              <p className="text-lg font-medium">No calls yet</p>
-              <p className="text-sm">Your call history will appear here</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {calls.map(call => (
-              <Card key={call.id} className="hover:bg-muted/30 transition-colors">
-                <CardContent className="flex items-center gap-4 py-4 px-5">
-                  <div className="shrink-0">{getCallIcon(call)}</div>
-                  <div className="flex-1 min-w-0">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Call History</h1>
+            <p className="mt-0.5 text-sm text-white/70">Your recent audio and video calls</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Content ── */}
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-2xl" />
+          ))}
+        </div>
+      ) : calls.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border py-16 text-center"
+        >
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <Phone className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">No calls yet</h3>
+          <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+            Your call history will appear here after you make or receive calls.
+          </p>
+        </motion.div>
+      ) : (
+        <StaggerContainer className="space-y-2">
+          {calls.map((call) => {
+            const sc = STATUS_CONFIG[call.status] ?? STATUS_CONFIG.missed;
+            const isOutgoing = call.caller_id === user?.id;
+
+            return (
+              <StaggerItem key={call.id}>
+                <motion.div
+                  whileHover={{ y: -1 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                  className="flex items-center gap-4 rounded-2xl border border-border/60 bg-card px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  {/* Call icon */}
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-muted">
+                    {getCallIcon(call)}
+                  </div>
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground truncate">{getOtherName(call)}</span>
-                      {call.call_type === 'video' ? (
-                        <Video className="h-3.5 w-3.5 text-muted-foreground" />
-                      ) : (
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
+                      <span className="truncate font-semibold text-foreground">
+                        {getOtherName(call)}
+                      </span>
+                      {call.call_type === 'video'
+                        ? <Video className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                        : <Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      }
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{isOutgoing ? 'Outgoing' : 'Incoming'}</span>
+                      <span>·</span>
                       <span>{formatTime(call.started_at)}</span>
                       {call.status === 'completed' && call.duration_seconds > 0 && (
                         <>
@@ -124,14 +179,18 @@ const CallHistory = () => {
                       )}
                     </div>
                   </div>
-                  <div className="shrink-0">{getStatusBadge(call.status)}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
+
+                  {/* Status badge */}
+                  <span className={`inline-flex flex-shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${sc.bg} ${sc.color}`}>
+                    {sc.label}
+                  </span>
+                </motion.div>
+              </StaggerItem>
+            );
+          })}
+        </StaggerContainer>
+      )}
+    </div>
   );
 };
 

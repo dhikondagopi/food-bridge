@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Utensils, Users, Heart, TrendingUp, Shield, Ban, CheckCircle, Search, X, ChevronLeft, ChevronRight, Download, Camera, Building2 } from 'lucide-react';
+import { Utensils, Users, Heart, TrendingUp, Shield, ShieldCheck, Ban, CheckCircle, Search, X, ChevronLeft, ChevronRight, Download, Camera, Building2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PhotoModeration from '@/components/admin/PhotoModeration';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { Navigate } from 'react-router-dom';
+export { default } from '@/pages/Admin';
 
 interface UserProfile {
   id: string;
@@ -21,6 +23,7 @@ interface UserProfile {
   organization_name: string | null;
   created_at: string;
   is_blocked?: boolean;
+  isAdmin?: boolean;
 }
 
 const ROLES = ['restaurant', 'ngo', 'volunteer', 'admin'];
@@ -28,12 +31,15 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 const DEFAULT_PAGE_SIZE = 10;
 
 const AdminPage = () => {
-  // ✅ Use profile.role instead of user_roles table
   const { user, profile, loading: authLoading } = useAuth();
 
   const [stats, setStats] = useState({
-    donations: 0, restaurants: 0, ngos: 0,
-    volunteers: 0, delivered: 0, meals: 0,
+    donations: 0,
+    restaurants: 0,
+    ngos: 0,
+    volunteers: 0,
+    delivered: 0,
+    meals: 0,
   });
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -64,7 +70,7 @@ const AdminPage = () => {
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       ]);
 
-      // ✅ parseInt to fix meals concatenation bug
+      // ✅ FIX: parse quantity as number to avoid string concatenation
       const totalMeals = (donationsRes.data || []).reduce(
         (sum: number, d: any) => sum + (parseInt(d.quantity) || 0), 0
       );
@@ -79,7 +85,7 @@ const AdminPage = () => {
       });
 
       setUsers((usersRes.data as UserProfile[]) || []);
-    } catch {
+    } catch (err) {
       toast.error('Failed to load admin data');
     } finally {
       setLoadingUsers(false);
@@ -95,7 +101,7 @@ const AdminPage = () => {
       const matchesSearch = searchQuery === '' ||
         u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (u.organization_name?.toLowerCase().includes(searchQuery.toLowerCase()));
+        (u.organization_name && u.organization_name.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesRole = roleFilter === 'all' || u.role === roleFilter;
       const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && !u.is_blocked) ||
@@ -115,36 +121,47 @@ const AdminPage = () => {
   const clearFilters = () => { setSearchQuery(''); setRoleFilter('all'); setStatusFilter('all'); };
   const hasActiveFilters = searchQuery !== '' || roleFilter !== 'all' || statusFilter !== 'all';
 
-  // ✅ Update role directly in profiles table
+  // ✅ Update role directly in profiles table (no edge function needed)
   const executeRoleChange = async (userId: string, newRole: string) => {
     setActionLoading(userId);
     try {
-      const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
       if (error) throw error;
-      toast.success('Role updated');
+      toast.success('Role updated successfully');
       await fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Failed to update role');
-    } finally { setActionLoading(null); }
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // ✅ Block/unblock via is_blocked column
   const executeToggleBlock = async (userId: string, currentlyBlocked: boolean) => {
     setActionLoading(userId);
     try {
-      const { error } = await supabase.from('profiles').update({ is_blocked: !currentlyBlocked }).eq('id', userId);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_blocked: !currentlyBlocked })
+        .eq('id', userId);
       if (error) throw error;
       toast.success(currentlyBlocked ? 'Account enabled' : 'Account blocked');
       await fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Failed to update account');
-    } finally { setActionLoading(null); }
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleRoleChange = (userId: string, newRole: string, userName: string, currentRole: string) => {
     if (userId === user?.id) { toast.error("You can't change your own role"); return; }
     setConfirmDialog({
-      open: true, title: 'Change User Role',
+      open: true,
+      title: 'Change User Role',
       description: `Change ${userName}'s role from "${currentRole}" to "${newRole}"?`,
       action: () => executeRoleChange(userId, newRole),
     });
@@ -155,7 +172,9 @@ const AdminPage = () => {
     setConfirmDialog({
       open: true,
       title: currentlyBlocked ? 'Unblock Account' : 'Block Account',
-      description: currentlyBlocked ? `Re-enable ${userName}'s account?` : `Block ${userName}'s account?`,
+      description: currentlyBlocked
+        ? `Re-enable ${userName}'s account?`
+        : `Block ${userName}'s account? They won't be able to log in.`,
       action: () => executeToggleBlock(userId, currentlyBlocked),
     });
   };
@@ -186,7 +205,6 @@ const AdminPage = () => {
     );
   }
 
-  // ✅ Check profile.role directly — no user_roles table needed
   if (profile?.role !== 'admin') {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -200,16 +218,15 @@ const AdminPage = () => {
   }
 
   const statCards = [
-    { label: 'Total Donations', value: stats.donations,  icon: Utensils,    bg: 'bg-orange-50 dark:bg-orange-500/10',  iconBg: 'bg-orange-500' },
-    { label: 'Meals Saved',     value: stats.meals,       icon: TrendingUp,  bg: 'bg-emerald-50 dark:bg-emerald-500/10', iconBg: 'bg-emerald-500' },
-    { label: 'Restaurants',     value: stats.restaurants, icon: Utensils,    bg: 'bg-amber-50 dark:bg-amber-500/10',    iconBg: 'bg-amber-500' },
-    { label: 'NGOs',            value: stats.ngos,        icon: Building2,   bg: 'bg-sky-50 dark:bg-sky-500/10',        iconBg: 'bg-sky-500' },
-    { label: 'Volunteers',      value: stats.volunteers,  icon: Heart,       bg: 'bg-violet-50 dark:bg-violet-500/10',  iconBg: 'bg-violet-500' },
-    { label: 'Delivered',       value: stats.delivered,   icon: CheckCircle, bg: 'bg-green-50 dark:bg-green-500/10',    iconBg: 'bg-green-500' },
+    { label: 'Total Donations', value: stats.donations,   icon: Utensils,   bg: 'bg-orange-50 dark:bg-orange-500/10',  iconBg: 'bg-orange-500' },
+    { label: 'Meals Saved',     value: stats.meals,        icon: TrendingUp, bg: 'bg-emerald-50 dark:bg-emerald-500/10', iconBg: 'bg-emerald-500' },
+    { label: 'Restaurants',     value: stats.restaurants,  icon: Utensils,   bg: 'bg-amber-50 dark:bg-amber-500/10',    iconBg: 'bg-amber-500' },
+    { label: 'NGOs',            value: stats.ngos,         icon: Building2,  bg: 'bg-sky-50 dark:bg-sky-500/10',        iconBg: 'bg-sky-500' },
+    { label: 'Volunteers',      value: stats.volunteers,   icon: Heart,      bg: 'bg-violet-50 dark:bg-violet-500/10',  iconBg: 'bg-violet-500' },
+    { label: 'Delivered',       value: stats.delivered,    icon: CheckCircle,bg: 'bg-green-50 dark:bg-green-500/10',    iconBg: 'bg-green-500' },
   ];
 
   return (
-    // ✅ NO DashboardLayout wrapper — Dashboard.tsx already wraps this
     <div className="space-y-6">
 
       {/* ── Header ── */}
@@ -220,15 +237,17 @@ const AdminPage = () => {
       >
         <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-8 right-24 h-32 w-32 rounded-full bg-white/10 blur-xl" />
-        <div className="relative">
-          <div className="mb-1 flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
-              <Shield className="h-5 w-5 text-white" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-sm font-medium text-white/80">Administrator</span>
             </div>
-            <span className="text-sm font-medium text-white/80">Administrator</span>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Admin Dashboard</h1>
+            <p className="mt-1 text-sm text-white/70">System overview · user management · moderation</p>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-white/70">System overview · user management · moderation</p>
         </div>
       </motion.div>
 
@@ -281,16 +300,17 @@ const AdminPage = () => {
                       <X className="h-3 w-3 mr-1" /> Clear
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={exportCSV} className="rounded-xl text-xs">
+                  <Button variant="outline" size="sm" onClick={exportCSV} className="text-xs rounded-xl">
                     <Download className="h-3 w-3 mr-1" /> Export CSV
                   </Button>
                 </div>
               </div>
 
+              {/* Filters */}
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input placeholder="Search name, email or org..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="rounded-xl pl-9 h-9 text-sm" />
+                  <Input placeholder="Search by name, email or org..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="rounded-xl pl-9 h-9 text-sm" />
                 </div>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
                   <SelectTrigger className="h-9 w-full rounded-xl text-xs sm:w-36"><SelectValue placeholder="All Roles" /></SelectTrigger>
@@ -339,7 +359,7 @@ const AdminPage = () => {
                         <tr key={u.id} className={`border-b border-border/50 transition-colors hover:bg-muted/30 ${u.is_blocked ? 'opacity-60' : ''}`}>
                           <td className="px-2 py-3 font-medium text-foreground">
                             <div className="flex items-center gap-2">
-                              <span className="max-w-[100px] truncate sm:max-w-none">{u.full_name || '—'}</span>
+                              <span className="truncate max-w-[100px] sm:max-w-none">{u.full_name || '—'}</span>
                               {u.id === user?.id && <span className="text-xs text-muted-foreground">(you)</span>}
                             </div>
                           </td>
@@ -372,10 +392,7 @@ const AdminPage = () => {
                               onClick={() => handleToggleBlock(u.id, !!u.is_blocked, u.full_name)}
                               className="h-8 rounded-xl text-xs"
                             >
-                              {u.is_blocked
-                                ? <><CheckCircle className="mr-1 h-3 w-3" />Enable</>
-                                : <><Ban className="mr-1 h-3 w-3" />Block</>
-                              }
+                              {u.is_blocked ? <><CheckCircle className="mr-1 h-3 w-3" />Enable</> : <><Ban className="mr-1 h-3 w-3" />Block</>}
                             </Button>
                           </td>
                         </tr>
@@ -385,6 +402,7 @@ const AdminPage = () => {
                 </div>
               )}
 
+              {/* Pagination */}
               {filteredUsers.length > 0 && (
                 <div className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-border pt-4 sm:flex-row">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -400,7 +418,7 @@ const AdminPage = () => {
                   <div className="flex items-center gap-1">
                     <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="h-7 rounded-lg px-2 text-xs">First</Button>
                     <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="h-7 rounded-lg px-2"><ChevronLeft className="h-3 w-3" /></Button>
-                    <span className="px-2 text-xs">{currentPage}/{totalPages || 1}</span>
+                    <span className="px-2 text-xs text-foreground">{currentPage}/{totalPages || 1}</span>
                     <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)} className="h-7 rounded-lg px-2"><ChevronRight className="h-3 w-3" /></Button>
                     <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)} className="h-7 rounded-lg px-2 text-xs">Last</Button>
                   </div>
@@ -420,10 +438,7 @@ const AdminPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="rounded-xl" onClick={async () => {
-              setConfirmDialog(prev => ({ ...prev, open: false }));
-              await confirmDialog.action();
-            }}>
+            <AlertDialogAction className="rounded-xl" onClick={async () => { setConfirmDialog(prev => ({ ...prev, open: false })); await confirmDialog.action(); }}>
               Confirm
             </AlertDialogAction>
           </AlertDialogFooter>

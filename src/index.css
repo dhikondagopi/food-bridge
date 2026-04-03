@@ -1,25 +1,68 @@
 /* ---------------- GOOGLE FONTS ---------------- */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ---------------- BASE VARIABLES ---------------- */
+/* ---------------- THEME VARIABLES ---------------- */
 @layer base {
   :root {
-    /* (KEEP YOUR VARIABLES SAME — NO CHANGE) */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 20% 40%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
   }
 
   .dark {
-    /* (KEEP SAME) */
+    --background: 222 47% 14%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 18%;
+    --card-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 222 47% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 47% 20%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 222 47% 20%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 40%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 30%;
+    --input: 217 33% 30%;
+    --ring: 224 76% 60%;
   }
 }
 
-/* ---------------- GLOBAL RESET + MOBILE FIX ---------------- */
+/* ---------------- GLOBAL RESET ---------------- */
 @layer base {
   * {
     @apply border-border;
@@ -30,115 +73,52 @@
 
   html, body {
     width: 100%;
-    overflow-x: hidden; /* 🔥 IMPORTANT FIX */
+    overflow-x: hidden;
   }
 
   body {
-    @apply bg-background text-foreground font-body antialiased;
-    transition: background-color 0.4s ease, color 0.3s ease;
+    @apply bg-background text-foreground font-sans antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* 🔥 Prevent overflow from all elements */
-  * {
-    max-width: 100%;
-  }
-
-  /* 🔥 Fix images/videos */
   img, video {
     max-width: 100%;
     height: auto;
     display: block;
   }
 
-  /* 🔥 Fix long text breaking UI */
   p, h1, h2, h3, h4, h5, h6 {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  body *:not([class*="motion"]) {
-    transition: background-color 0.4s ease, color 0.3s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+    word-break: break-word;
   }
 }
 
-/* ---------------- MOBILE RESPONSIVE HELPERS ---------------- */
+/* ---------------- UTILITIES ---------------- */
 @layer utilities {
 
-  /* 🔥 Container fix */
   .container {
     width: 100%;
-    padding-left: 16px;
-    padding-right: 16px;
-    margin-left: auto;
-    margin-right: auto;
+    padding: 16px;
+    margin: auto;
   }
 
-  /* 🔥 Prevent overflow from flex/grid */
-  .flex-wrap-safe {
-    flex-wrap: wrap;
-  }
-
-  /* 🔥 Responsive text scaling */
   .text-responsive {
     font-size: clamp(14px, 2.5vw, 18px);
   }
 
-  /* 🔥 Responsive headings */
   .heading-responsive {
     font-size: clamp(20px, 5vw, 36px);
   }
 
-  /* 🔥 Safe spacing */
-  .section-padding {
-    padding: 16px;
-  }
-
-  /* 🔥 Button fix for mobile */
   .btn-responsive {
     width: 100%;
     text-align: center;
   }
 
-  /* 🔥 Fix large elements */
-  .no-overflow {
-    overflow: hidden;
-  }
-
-  /* ---------------- YOUR EXISTING UTILITIES ---------------- */
-
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-  .gradient-warm {
-    background: var(--gradient-warm);
-  }
-  .gradient-card {
-    background: var(--gradient-card);
-  }
-  .gradient-glow {
-    background: var(--gradient-glow);
-  }
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
-  .shadow-elevated {
-    box-shadow: var(--shadow-elevated);
-  }
-  .shadow-glow {
-    box-shadow: var(--shadow-glow);
-  }
   .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+    @apply bg-card backdrop-blur-xl border border-border;
   }
+
   .hover-lift {
-    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-elevated;
-  }
-  .text-gradient {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-hero);
+    @apply transition-all duration-300 hover:-translate-y-1;
   }
 }

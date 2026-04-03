@@ -5,7 +5,11 @@ type PrefetchLinkProps = LinkProps & {
   children: ReactNode;
 };
 
-const PrefetchLink = ({ to, children, ...props }: PrefetchLinkProps) => {
+export default function PrefetchLink({
+  to,
+  children,
+  ...props
+}: PrefetchLinkProps) {
   const navigate = useNavigate();
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -19,6 +23,4 @@ const PrefetchLink = ({ to, children, ...props }: PrefetchLinkProps) => {
       {children}
     </Link>
   );
-};
-
-export default PrefetchLink;
+}

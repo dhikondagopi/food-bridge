@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import { supabase } from '@/lib/supabaseClient';
+import DashboardLayout from '@/components/motion/layout/DashboardLayout';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';

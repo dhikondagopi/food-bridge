@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AuthCallback from "@/pages/AuthCallback";
 
-// Pages
 const Landing = lazy(() => import("@/pages/Landing"));
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
@@ -16,154 +15,84 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Chat = lazy(() => import("@/pages/Chat"));
 const CallHistory = lazy(() => import("@/pages/CallHistory"));
-const Admin = lazy(() => import("@/pages/Admin"));
 const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
 const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
 const Install = lazy(() => import("@/pages/Install"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-// Animation
 const pageVariants = {
-  initial: { opacity: 0, y: 12 },
+  initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
+  exit: { opacity: 0, y: -10 },
 };
 
-const pageTransition = {
-  duration: 0.3,
-  ease: [0.25, 0.1, 0.25, 1],
-};
+const pageTransition = { duration: 0.25 };
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+  </div>
+);
+
+const AnimatedPage = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    variants={pageVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={pageTransition}
+    className="min-h-screen"
+  >
+    {children}
+  </motion.div>
+);
 
 const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
-    <>
-      {/* 🔥 IMPORTANT: Keep callback outside animation */}
-      <Routes>
-        <Route path="/auth/callback" element={<AuthCallback />} />
-      </Routes>
-
+    <Suspense fallback={<PageLoader />}>
       <AnimatePresence mode="wait">
-        <motion.div
-          key={location.pathname}
-          variants={pageVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransition}
-          className="min-h-screen relative"
-        >
-          <Suspense
-            fallback={
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              </div>
-            }
-          >
-            {/* 🔥 IMPORTANT FIX */}
-            <Routes location={location} key={location.key}>
-              
-              {/* Public */}
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+        <Routes location={location} key={location.pathname}>
+          {/* Public routes */}
+          <Route path="/" element={<AnimatedPage><Landing /></AnimatedPage>} />
+          <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
+          <Route path="/signup" element={<AnimatedPage><Signup /></AnimatedPage>} />
+          <Route path="/forgot-password" element={<AnimatedPage><ForgotPassword /></AnimatedPage>} />
+          <Route path="/reset-password" element={<AnimatedPage><ResetPassword /></AnimatedPage>} />
+          <Route path="/auth/callback" element={<AnimatedPage><AuthCallback /></AnimatedPage>} />
+          <Route path="/sudo-panel" element={<AnimatedPage><AdminLogin /></AnimatedPage>} />
+          <Route path="/install" element={<AnimatedPage><Install /></AnimatedPage>} />
 
-              {/* Protected */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            {/* Dashboard — routes to correct dashboard based on role */}
+            <Route path="/dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/restaurant-dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/ngo-dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/volunteer-dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
 
-              <Route
-                path="/volunteer-dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
+            <Route path="/profile" element={<AnimatedPage><Profile /></AnimatedPage>} />
+            <Route path="/analytics" element={<AnimatedPage><Analytics /></AnimatedPage>} />
+            <Route path="/chat" element={<AnimatedPage><Chat /></AnimatedPage>} />
+            <Route path="/call-history" element={<AnimatedPage><CallHistory /></AnimatedPage>} />
+            <Route path="/map" element={<AnimatedPage><MapPage /></AnimatedPage>} />
+            <Route path="/leaderboard" element={<AnimatedPage><Leaderboard /></AnimatedPage>} />
 
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
+            {/* ✅ Admin routes — go through Dashboard so sidebar + DashboardLayout is included */}
+            <Route path="/admin" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/admin/dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/admin/users" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/admin/analytics" element={<AnimatedPage><Analytics /></AnimatedPage>} />
+            <Route path="/admin/food-listings" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/admin/volunteers" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/admin/settings" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+          </Route>
 
-              <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoute>
-                    <Analytics />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/chat"
-                element={
-                  <ProtectedRoute>
-                    <Chat />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/call-history"
-                element={
-                  <ProtectedRoute>
-                    <CallHistory />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/map"
-                element={
-                  <ProtectedRoute>
-                    <MapPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/leaderboard"
-                element={
-                  <ProtectedRoute>
-                    <Leaderboard />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route path="/install" element={<Install />} />
-
-              {/* Admin (should also be protected ideally) */}
-              <Route path="/sudo-panel" element={<AdminLogin />} />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <Admin />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </motion.div>
+          <Route path="*" element={<AnimatedPage><NotFound /></AnimatedPage>} />
+        </Routes>
       </AnimatePresence>
-    </>
+    </Suspense>
   );
 };
 
