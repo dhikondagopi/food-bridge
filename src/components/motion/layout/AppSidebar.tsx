@@ -5,84 +5,101 @@ import { NavLink } from '@/components/NavLink';
 import {
   Leaf, LogOut, MapPin, LayoutDashboard, BarChart3,
   MessageCircle, User, PhoneCall, Trophy, Users2,
-  Settings, Shield, Package, ClipboardList,
+  Settings, Shield, Package, ClipboardList, ChefHat,
+  HandHeart, Building2, Crown, Utensils,
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarFooter, SidebarHeader, useSidebar,
 } from '@/components/ui/sidebar';
 
+const ROLE_CONFIG: Record<string, { label: string; icon: typeof ChefHat; color: string; emoji: string }> = {
+  restaurant: { label: 'Restaurant', icon: ChefHat,    color: 'text-orange-500', emoji: '🍽️' },
+  ngo:        { label: 'NGO',        icon: Building2,  color: 'text-sky-500',    emoji: '🏢' },
+  volunteer:  { label: 'Volunteer',  icon: HandHeart,  color: 'text-emerald-500', emoji: '🤝' },
+  admin:      { label: 'Admin',      icon: Crown,      color: 'text-violet-500', emoji: '👑' },
+};
+
 export function AppSidebar() {
-  const { user, profile, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { t } = useTranslation();
   const isAdmin = profile?.role === 'admin';
+  const rc = ROLE_CONFIG[profile?.role || 'volunteer'] ?? ROLE_CONFIG.volunteer;
+  const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
-  // ✅ ROLE-BASED NAVIGATION
-  const userNavLinks = [
-    { to: '/dashboard', icon: LayoutDashboard, label: t('sidebar.dashboard') },
-    { to: '/map', icon: MapPin, label: t('sidebar.map') },
-    { to: '/leaderboard', icon: Trophy, label: t('sidebar.leaderboard') },
-    { to: '/chat', icon: MessageCircle, label: t('sidebar.chat') },
-    { to: '/call-history', icon: PhoneCall, label: t('sidebar.calls') },
+  // ✅ Common nav links for all roles
+  const commonNavLinks = [
+    { to: '/dashboard',    icon: LayoutDashboard, label: t('sidebar.dashboard') },
+    { to: '/map',          icon: MapPin,           label: t('sidebar.map') },
+    { to: '/leaderboard',  icon: Trophy,           label: t('sidebar.leaderboard') },
+    { to: '/chat',         icon: MessageCircle,    label: t('sidebar.chat') },
+    { to: '/call-history', icon: PhoneCall,        label: t('sidebar.calls') },
   ];
 
+  // ✅ Role-specific nav links shown after dashboard
+  const roleNavLinks: { to: string; icon: typeof LayoutDashboard; label: string }[] = 
+    profile?.role === 'restaurant' ? [
+      { to: '/dashboard', icon: Utensils, label: 'Donations' },
+    ] : profile?.role === 'ngo' ? [
+      { to: '/dashboard', icon: Package, label: 'Pickup Requests' },
+    ] : profile?.role === 'volunteer' ? [
+      { to: '/dashboard', icon: HandHeart, label: 'My Tasks' },
+    ] : [];
+
+  // Admin extra links
   const adminNavLinks = [
-    { to: '/admin/users', icon: Users2, label: 'Users' },
-    { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-    { to: '/admin/food-listings', icon: Package, label: 'Food Listings' },
-    { to: '/admin/volunteers', icon: ClipboardList, label: 'Volunteers' },
-    { to: '/admin/settings', icon: Settings, label: 'Settings' },
+    { to: '/admin/users',         icon: Users2,        label: 'Users' },
+    { to: '/admin/analytics',     icon: BarChart3,     label: 'Analytics' },
+    { to: '/admin/food-listings', icon: Package,       label: 'Food Listings' },
+    { to: '/admin/volunteers',    icon: ClipboardList, label: 'Volunteers' },
+    { to: '/admin/settings',      icon: Settings,      label: 'Settings' },
   ];
 
-  const allNavLinks = isAdmin ? [...userNavLinks, ...adminNavLinks] : userNavLinks;
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  const navLinks = isAdmin
+    ? [...commonNavLinks, ...adminNavLinks]
+    : [...commonNavLinks];
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
-        <Link to="/" className="flex items-center gap-2">
-          <Leaf className="h-6 w-6 text-primary shrink-0" />
+
+      {/* ── Header / Logo ── */}
+      <SidebarHeader className="border-b border-sidebar-border p-3 sm:p-4">
+        <Link to="/" className="flex items-center gap-2.5 rounded-xl p-1 transition hover:bg-sidebar-accent/10">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Leaf className="h-5 w-5 text-primary" />
+          </div>
           {!collapsed && (
-            <span className="font-heading text-lg font-bold text-foreground">
-              {t('brand')}
-            </span>
+            <span className="text-base font-bold text-foreground">{t('brand')}</span>
           )}
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
-        {/* ✅ MAIN NAVIGATION */}
+      {/* ── Navigation ── */}
+      <SidebarContent className="px-2 py-3">
+
+        {/* Main nav */}
         <SidebarGroup>
-          <SidebarGroupLabel>{t('sidebar.navigation')}</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t('sidebar.navigation')}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {allNavLinks.map((link) => (
-                <SidebarMenuItem key={link.to}>
+            <SidebarMenu className="space-y-0.5">
+              {navLinks.map(link => (
+                <SidebarMenuItem key={`${link.to}-${link.label}`}>
                   <SidebarMenuButton asChild tooltip={link.label}>
                     <NavLink
                       to={link.to}
                       end
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/10 hover:text-sidebar-foreground transition-colors"
-                      activeClassName="bg-sidebar-primary/15 text-sidebar-primary font-semibold"
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/10 hover:text-sidebar-foreground"
+                      activeClassName="bg-primary/10 text-primary font-semibold"
                     >
-                      <link.icon className="h-4 w-4 shrink-0" />
+                      <link.icon className="h-4 w-4 flex-shrink-0" />
                       {!collapsed && <span>{link.label}</span>}
                     </NavLink>
                   </SidebarMenuButton>
@@ -92,23 +109,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* ✅ ADMIN SECTION (Only for admins) */}
+        {/* Admin panel section */}
         {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-orange-500" />
-              Admin Panel
+          <SidebarGroup className="mt-2">
+            <SidebarGroupLabel className="flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-violet-500">
+              <Shield className="h-3 w-3" />
+              {!collapsed && 'Admin Panel'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-0.5">
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Dashboard Overview">
+                  <SidebarMenuButton asChild tooltip="Overview">
                     <NavLink
                       to="/admin/dashboard"
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/70 hover:bg-orange-500/10 hover:text-orange-500 transition-colors"
-                      activeClassName="bg-orange-500/20 text-orange-500 font-semibold border-r-2 border-orange-500"
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-violet-500/10 hover:text-violet-500"
+                      activeClassName="bg-violet-500/10 text-violet-500 font-semibold"
                     >
-                      <LayoutDashboard className="h-4 w-4" />
+                      <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
                       {!collapsed && <span>Overview</span>}
                     </NavLink>
                   </SidebarMenuButton>
@@ -118,9 +135,11 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* ✅ QUICK ACTIONS */}
-        <SidebarGroup>
-          <SidebarGroupLabel>{t('sidebar.quickActions')}</SidebarGroupLabel>
+        {/* Quick Actions */}
+        <SidebarGroup className="mt-2">
+          <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t('sidebar.quickActions')}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -128,10 +147,10 @@ export function AppSidebar() {
                   <NavLink
                     to="/profile"
                     end
-                    className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/10 hover:text-sidebar-foreground transition-colors"
-                    activeClassName="bg-sidebar-primary/15 text-sidebar-primary font-semibold"
+                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/10 hover:text-sidebar-foreground"
+                    activeClassName="bg-primary/10 text-primary font-semibold"
                   >
-                    <User className="h-4 w-4 shrink-0" />
+                    <User className="h-4 w-4 flex-shrink-0" />
                     {!collapsed && <span>{t('sidebar.profile')}</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -141,30 +160,35 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-sidebar-border space-y-2">
+      {/* ── Footer ── */}
+      <SidebarFooter className="space-y-2 border-t border-sidebar-border p-3">
         <LanguageSwitcher collapsed={collapsed} />
         <div className="flex items-center gap-2">
-          <ThemeToggle />
+          <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ring-2 ring-border ${rc.color} bg-muted`}>
+            {initials}
+          </div>
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-sidebar-foreground truncate">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
                 {profile?.full_name || 'User'}
-              </div>
-              <div className="text-xs text-muted-foreground capitalize">
-                {profile?.role || 'guest'}
-                {isAdmin && ' 👑'}
-              </div>
+              </p>
+              <p className={`text-xs font-medium capitalize ${rc.color}`}>
+                {rc.label} {rc.emoji}
+              </p>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSignOut}
-            title={t('sidebar.signOut')}
-            className="shrink-0 hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-shrink-0 items-center gap-1">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => signOut()}
+              title={t('sidebar.signOut')}
+              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
